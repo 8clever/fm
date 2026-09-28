@@ -83,7 +83,7 @@ const title=()=>pick(['Velvet','Neon','Midnight','Glass','Paper','Solar','Quiet'
 
 // ---------- JAZZ: rootless ii-V-I voicings, walking bass, improvised lead, swung ride ----------
 function jazz(){
- const r=pick([48,53,46,51,55]),bpm=ri(104,148),P=pick([[1,4,0,0],[1,4,0,5],[0,5,1,4],[2,5,1,4],[0,2,1,4]]);
+ const r=pick([48,53,46,51,55]),bpm=ri(84,112),P=pick([[1,4,0,0],[1,4,0,5],[0,5,1,4],[2,5,1,4],[0,2,1,4]]);
  const ch=S(P.map(d=>C([2,4,6,8].map(k=>deg(r,MAJ,d+k)))));
  const wk=S(P.map((d,i)=>B([d,d+2,d+4,P[(i+1)%4]].map((x,j)=>deg(r-12,MAJ,x)+(j>2?pick([-1,1]):0)))));
  let d=pick([8,9,11]);
