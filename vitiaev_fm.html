@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" media="(prefers-color-scheme:light)" content="#e8e0d0"><meta name="theme-color" media="(prefers-color-scheme:dark)" content="#090b10">
+<title>VITIAEV FM · generative radio</title>
+<style>
+:root{--bg:#e8e0d0;--pn:#d6ccb8;--ink:#211d17;--mu:#857a68;--ac:#d6432a;--lit:#f7f1df;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#090b10;--pn:#151a25;--ink:#e8ecf4;--mu:#75819b;--ac:#ffb020;--lit:#0c1017}}
+:root[data-theme="dark"]{--bg:#090b10;--pn:#151a25;--ink:#e8ecf4;--mu:#75819b;--ac:#ffb020;--lit:#0c1017}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100%;padding:18px;background:var(--bg);color:var(--ink);font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;display:grid;place-items:center}
+main{width:min(720px,100%)}
+h1{margin:0;font-size:20px;letter-spacing:.35em}
+.sub{margin:2px 0 14px;color:var(--mu)}
+.radio{background:var(--pn);border-radius:24px;padding:18px;box-shadow:0 24px 60px #0005,inset 0 1px #fff3}
+.screen{background:var(--lit);border-radius:14px;padding:14px 16px 8px;border:1px solid #0003}
+#mhz{font-size:clamp(42px,13vw,68px);font-weight:700;line-height:1;color:var(--sc,var(--mu));text-shadow:0 0 18px currentColor}
+#mhz small{font-size:14px;margin-left:8px;color:var(--mu);text-shadow:none}
+#stn{letter-spacing:.2em;font-weight:700;margin-top:4px}
+#trk{color:var(--mu);min-height:1.5em}
+canvas{width:100%;height:64px;display:block;margin-top:6px}
+.dial{position:relative;height:74px;margin:20px 4px 6px}
+.rule{position:absolute;left:0;right:0;top:14px;height:22px;opacity:.7;background:repeating-linear-gradient(90deg,var(--mu) 0 1px,transparent 1px 4.878%)}
+.mk{position:absolute;bottom:0;transform:translateX(-50%);font-size:10px;color:var(--mu);text-align:center;pointer-events:none}
+.mk:before{content:"";display:block;width:8px;height:8px;border-radius:50%;background:var(--c);margin:0 auto 2px}
+input[type=range]{position:absolute;inset:0 0 auto;width:100%;height:56px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:ew-resize}
+input::-webkit-slider-thumb{-webkit-appearance:none;width:4px;height:56px;border-radius:2px;background:var(--ac);box-shadow:0 0 14px var(--ac)}
+input::-moz-range-thumb{width:4px;height:56px;border:0;border-radius:2px;background:var(--ac)}
+input::-webkit-slider-runnable-track,input::-moz-range-track{background:transparent}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--mu);border-radius:999px;padding:7px 14px;cursor:pointer}
+button:hover{border-color:var(--ac)}
+button.lit{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+pre{margin:14px 2px 0;color:var(--mu);font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:170px;overflow:auto}
+/* mobile + background effects */
+html{-webkit-text-size-adjust:100%}
+body{place-items:start center;overflow-x:hidden}
+main{position:relative;z-index:1;margin-top:min(4vh,40px)}
+#bg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+body:after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,#0000 0 2px,#00000012 2px 3px),radial-gradient(ellipse at 50% 40%,#0000 55%,#0004)}
+.radio{background:color-mix(in srgb,var(--pn) 86%,transparent);box-shadow:0 24px 60px #0005,0 0 70px -12px var(--sc,transparent),inset 0 1px #fff3;transition:box-shadow .6s}
+.dial{height:84px;margin:18px 0 6px}
+.rule{left:16px;right:16px;top:16px;height:26px}
+input[type=range]{height:64px;touch-action:pan-y}
+input::-webkit-slider-thumb{width:32px;height:64px;border-radius:0;box-shadow:none;background:linear-gradient(90deg,#0000 14px,var(--ac) 14px 18px,#0000 18px)}
+input::-moz-range-thumb{width:32px;height:64px;border-radius:0;background:linear-gradient(90deg,#0000 14px,var(--ac) 14px 18px,#0000 18px)}
+.row{display:grid;grid-template-columns:repeat(3,1fr)}
+.row+.row{margin-top:8px}
+button{min-height:44px;padding:0 6px;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
+@media(max-width:520px){
+ body{padding:10px}
+ .sub{font-size:12px}
+ .radio{padding:12px;border-radius:20px}
+ .screen{padding:12px 12px 6px}
+ #stn{font-size:13px;letter-spacing:.12em}
+ #trk{font-size:12px}
+ button{font-size:12px}
+ pre{max-height:110px}
+}
+</style></head><body>
+<canvas id="bg"></canvas>
+<main>
+<h1>VITIAEV FM</h1>
+<p class="sub">An endless generative radio: every track is composed live and never plays twice.</p>
+<div class="radio">
+ <div class="screen"><div id="mhz">88.0<small>MHz</small></div><div id="stn">— static —</div><div id="trk">Press ON AIR to power the radio</div><canvas id="vis"></canvas></div>
+ <div class="dial"><div class="rule"></div><div id="mks"></div><input id="dial" type="range" min="875" max="1080" value="880" aria-label="Tuning dial"></div>
+ <div class="row"><button id="pwr">⏻ ON AIR</button><button id="scan">⟳ AUTO-SCAN</button><button id="nxt">✦ NEW TRACK</button></div><div class="row" id="pre"></div>
+</div>
+<pre id="score"></pre>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@strudel/web"></script>
+<script>
+const E={};document.querySelectorAll('[id]').forEach(e=>E[e.id]=e);
+const R=Math.random,pick=a=>a[R()*a.length|0],ri=(a,b)=>a+(R()*(b-a+1)|0);
+const NN='C C# D D# E F F# G G# A A# B'.split(' ');
+const MAJ=[0,2,4,5,7,9,11],MIN=[0,2,3,5,7,8,10],PHR=[0,1,3,5,7,8,10];
+const deg=(r,sc,d)=>r+sc[(d%7+7)%7]+12*Math.floor(d/7);
+const B=a=>'['+a.join(' ')+']',S=a=>'<'+a.join(' ')+'>',C=a=>'['+a+']';
+const opt=(p,o)=>{for(const k in o)if(typeof p[k]=='function')p=p[k](...[].concat(o[k]));return p};
+const title=()=>pick(['Velvet','Neon','Midnight','Glass','Paper','Solar','Quiet','Copper','Lunar','Electric'])+' '+pick(['Orbit','Rain','Harbor','Signal','Garden','Circuit','Tide','Mirage','Cathedral','Tram']);
+
+// ---------- JAZZ: rootless ii-V-I voicings, walking bass, improvised lead, swung ride ----------
+function jazz(){
+ const r=pick([48,53,46,51,55]),bpm=ri(104,148),P=pick([[1,4,0,0],[1,4,0,5],[0,5,1,4],[2,5,1,4],[0,2,1,4]]);
+ const ch=S(P.map(d=>C([2,4,6,8].map(k=>deg(r,MAJ,d+k)))));
+ const wk=S(P.map((d,i)=>B([d,d+2,d+4,P[(i+1)%4]].map((x,j)=>deg(r-12,MAJ,x)+(j>2?pick([-1,1]):0)))));
+ let d=pick([8,9,11]);
+ const ld=S(P.map(()=>B(Array.from({length:8},()=>R()<.4?'~':deg(r,MAJ,d=Math.min(15,Math.max(7,d+pick([-2,-1,-1,1,1,2]))))))));
+ const p=stack(
+  note(ch).struct(pick(['[x ~ ~ x] [~ ~ x ~]','[~ x ~ ~] [x ~ ~ x]','[x ~ ~ ~] [~ x ~ x]'])).s('triangle').lpf(1900).attack(.008).decay(.6).sustain(.08).release(.4).gain(.42).pan(.35).room(.5),
+  note(wk).s('sine').lpf(500).attack(.01).decay(.28).sustain(.3).release(.1).gain(.95),
+  note(ld).s('sine').attack(.01).decay(.3).sustain(.2).release(.3).gain(.4).pan(.65).delay(.3).delaytime(.4).delayfeedback(.35).room(.4),
+  opt(s('white').struct('x [x x] x [x x]'),{swingBy:[1/3,4]}).hpf(7500).decay(.1).sustain(0).gain(.22),
+  s('pink').struct('~ x ~ x').lpf(3500).hpf(900).decay(.1).sustain(0).gain(.3),
+  note(36).s('sine').struct('x ~ ~ ~').decay(.15).sustain(0).gain(.35)
+ ).fast(bpm/120);
+ return{p,bpm,i:`${NN[r%12]} major · ${bpm} bpm · rootless 9th voicings\nchords ${ch}\nwalking bass ${wk}\nimprov ${ld}`}
+}
+
+// ---------- TECHNO: synth kick, offbeat hats, acid 303 with sweeping filter, dub stabs ----------
+function techno(){
+ const r=pick([31,33,34,36]),bpm=ri(124,134),sc=pick([MIN,PHR]),dt=60/bpm*.75,mk='<1 1 1 1 1 1 1 0>';
+ const ac=()=>B(Array.from({length:16},()=>R()<.28?'~':deg(r+12,sc,pick([0,0,0,2,3,4,7]))+(R()<.15?12:0)));
+ const acid=S([ac(),ac()]),P=pick([[0,3,0,5],[0,5,3,6],[0,0,3,6]]);
+ const stab=S(P.map(d=>C([0,2,4,6].map(k=>deg(r+24,sc,d+k)))));
+ const p=stack(
+  opt(note(28).s('sine').struct('x*4').attack(.001).decay(.3).sustain(0).gain(1.1),{penv:40,pdecay:.05,pdec:.05}).mask(mk),
+  s('white').struct('[~ x]*4').hpf(8500).decay(.07).sustain(0).gain(.3).mask(mk),
+  s('white').struct('x*16').hpf(9500).decay(.025).sustain(0).gain(rand.range(.05,.2)).degradeBy(.4),
+  s('pink').struct('~ x ~ x').hpf(1200).lpf(6500).decay(.14).sustain(0).gain(.45).room(.3),
+  note(r).s('sawtooth').struct('[~ x]*4').lpf(sine.range(160,520).slow(8)).decay(.15).sustain(0).gain(.55).mask(mk),
+  note(acid).s('sawtooth').lpf(sine.range(350,2800).slow(6)).lpq(10).decay(.13).sustain(0).gain(.4).delay(.3).delaytime(dt).delayfeedback(.4),
+  note(stab).struct(pick(['~ ~ x ~ ~ ~ x ~','~ x ~ ~ ~ x ~ ~','x ~ ~ ~ ~ ~ x ~'])).s('square').lpf(1600).decay(.15).sustain(0).gain(.18).room(.6).pan(.3)
+ ).fast(bpm/120);
+ return{p,bpm,i:`${NN[r%12]} ${sc===MIN?'aeolian':'phrygian'} · ${bpm} bpm · acid line mutates every bar\nacid ${acid}\nstabs ${stab}`}
+}
+
+// ---------- TRANCE: detuned supersaw gate, rolling bass, dotted-delay arp, breakdown + riser ----------
+function trance(){
+ const r=pick([45,43,50,47]),bpm=ri(134,142),P=pick([[0,5,2,6],[0,3,5,4],[0,6,5,6],[5,3,0,6]]),dt=60/bpm*.75,mk='<1 1 1 1 1 1 0 0>';
+ const sup=S(P.map(d=>C([0,2,4].flatMap(k=>{const n=deg(r+12,MIN,d+k);return[n-.16,n,n+.16].map(x=>x.toFixed(2))}).concat(deg(r,MIN,d)))));
+ const bs=S(P.map(d=>deg(r-12,MIN,d)));
+ const ar=S(P.map(d=>B(Array.from({length:16},()=>R()<.25?'~':deg(r+24,MIN,d+pick([0,2,4,7,9]))))));
+ const p=stack(
+  note(sup).struct(pick(['[x x ~ x]*4','[x ~ x x]*4','x*16'])).s('sawtooth').lpf(saw.range(600,4500).slow(8)).attack(.004).decay(.1).sustain(.7).release(.03).gain(.1).room(.3),
+  note(bs).s('sawtooth').struct('[~ x x x]*4').lpf(450).decay(.1).sustain(0).gain(.7).mask(mk),
+  opt(note(30).s('sine').struct('x*4').attack(.001).decay(.26).sustain(0).gain(1.1),{penv:36,pdecay:.05,pdec:.05}).mask(mk),
+  s('white').struct('[~ x]*4').hpf(8000).decay(.09).sustain(0).gain(.28).mask(mk),
+  s('pink').struct('~ x ~ x').hpf(1300).lpf(6000).decay(.16).sustain(0).gain(.4).room(.4).mask(mk),
+  note(ar).s('square').lpf(3200).decay(.11).sustain(0).gain(.2).delay(.4).delaytime(dt).delayfeedback(.5).room(.4).pan(.6),
+  s('white').struct('x*16').hpf(saw.range(600,9000).slow(2)).decay(.05).sustain(0).gain(saw.range(0,.35).slow(2)).mask('<0 0 0 0 0 0 1 1>')
+ ).fast(bpm/120);
+ return{p,bpm,i:`${NN[r%12]} minor · ${bpm} bpm · progression ${P.map(d=>d+1).join('–')} · 8-bar breakdown cycle\nsupersaw ${sup}\narp ${ar}`}
+}
+
+// ---------- between stations: radio static, crackle and heterodyne whistles ----------
+const stat=()=>stack(
+ s('white').sustain(1).release(.05).gain(.12).hpf(500).lpf(sine.range(2000,7000).slow(3)),
+ s('crackle').gain(.6),
+ note(rand.range(84,104).segment(2)).s('sine').gain(.035).delay(.5).delaytime(.2).delayfeedback(.6)
+);
+
+const ST=[{f:90.2,n:'BLUE ROOM',g:'jazz',fn:jazz,c:'#4da3ff'},{f:97.4,n:'CONCRETE 303',g:'techno',fn:techno,c:'#ff3d6e'},{f:104.6,n:'HORIZON',g:'trance',fn:trance,c:'#b26bff'}];
+let on=0,ready=0,cur,tm,sw,auto,bpmNow=0,col='#8a8a8a',wl;
+
+ST.forEach(q=>{
+ const m=document.createElement('div');m.className='mk';m.style.cssText=`left:calc(16px + (100% - 32px)*${(q.f*10-875)/205});--c:${q.c}`;m.textContent=q.g;E.mks.append(m);
+ const b=document.createElement('button');b.textContent=q.g.toUpperCase()+' '+q.f;b.style.borderColor=q.c;b.onclick=()=>seek(Math.round(q.f*10));E.pre.append(b);
+});
+
+const near=()=>{const f=+E.dial.value/10;return ST.find(q=>Math.abs(q.f-f)<.45)||null};
+function play(st){
+ try{
+  const o=st?st.fn():{p:stat(),bpm:0,i:''};
+  o.p.play();fl=1;bpmNow=o.bpm;col=st?st.c:'#8a8a8a';
+  E.trk.textContent=st?'♪ “'+title()+'” · '+o.bpm+' bpm':'tuning…';E.score.textContent=o.i;
+ }catch(e){E.trk.textContent='⚠ '+e.message}
+}
+function upd(fin){
+ const st=near();E.mhz.firstChild.nodeValue=(+E.dial.value/10).toFixed(1);
+ E.stn.textContent=st?st.n+' · '+st.g.toUpperCase():'— static —';
+ document.documentElement.style.setProperty('--sc',st?st.c:'var(--mu)');
+ if(!on)return;clearTimeout(tm);if(st===cur)return;
+ tm=setTimeout(()=>{const q=near();if(q===cur)return;cur=q;play(q)},st&&!fin?350:0);
+}
+async function boot(){
+ if(ready)return 1;
+ try{await strudel.initStrudel();ready=1}catch(e){E.trk.textContent='Could not start Strudel: '+e.message}
+ return ready;
+}
+async function start(){if(!await boot())return 0;on=1;try{wl=await navigator.wakeLock.request('screen')}catch(e){}E.pwr.classList.add('lit');E.pwr.textContent='■ OFF AIR';upd(1);return 1}
+function stop(){
+ on=0;cur=undefined;clearInterval(sw);clearInterval(auto);auto=0;try{hush()}catch(e){}try{wl&&wl.release()}catch(e){}
+ bpmNow=0;E.pwr.classList.remove('lit');E.scan.classList.remove('lit');E.pwr.textContent='⏻ ON AIR';E.trk.textContent='off air';
+}
+async function seek(t){
+ if(!on&&!await start())return;
+ clearInterval(sw);
+ sw=setInterval(()=>{const v=+E.dial.value,d=t-v;
+  if(Math.abs(d)<=2){E.dial.value=t;clearInterval(sw);upd(1)}
+  else{E.dial.value=v+Math.sign(d)*Math.max(2,Math.abs(d)/10|0);upd()}},30);
+}
+E.pwr.onclick=()=>on?stop():start();
+E.nxt.onclick=()=>{if(on&&cur)play(cur)};
+E.scan.onclick=async()=>{
+ if(auto){clearInterval(auto);auto=0;E.scan.classList.remove('lit');return}
+ if(!on&&!await start())return;
+ E.scan.classList.add('lit');
+ const go=()=>seek(Math.round(pick(ST.filter(q=>q!==cur)).f*10));go();auto=setInterval(go,40000);
+};
+E.dial.oninput=()=>{clearInterval(sw);upd()};
+E.dial.onchange=()=>upd(1);
+setInterval(()=>{if(on&&cur)play(cur)},50000); // the station keeps composing new tracks
+
+// ---------- background: a full-screen scene per station (decorative, beat-synced) ----------
+const bx=E.bg.getContext('2d'),rm=matchMedia('(prefers-reduced-motion:reduce)').matches;let W=0,H=0,fl=0;
+const fitBg=()=>{W=E.bg.width=innerWidth;H=E.bg.height=innerHeight};fitBg();addEventListener('resize',fitBg);
+function bgDraw(t,pu){
+ const k=!on||cur===undefined?'i':cur===null?'s':cur.g,c=k=='i'?'#ffb020':k=='s'?'#8a8a8a':col,X=W/2,Y=H/2,D=Math.hypot(W,H)/2,u=Math.max(W,H)/900;
+ if(rm)t=0;
+ bx.globalCompositeOperation='destination-out';bx.globalAlpha=k=='techno'||k=='trance'?.3:1;bx.fillRect(0,0,W,H);
+ bx.globalCompositeOperation='source-over';bx.fillStyle=c;bx.strokeStyle=c;
+ if(k=='s'){ // static: analog snow + rolling bar
+  bx.globalAlpha=.3;for(let i=0;i<220;i++)bx.fillRect(R()*W,R()*H,2*u+1,2*u+1);
+  bx.globalAlpha=.07;bx.fillRect(0,(t*160)%H,W,14*u)}
+ else if(k=='techno'){ // tunnel of rotating squares, strobing on the kick
+  for(let i=0;i<10;i++){const z=(t*bpmNow/240+i/10)%1,s=z*z*D*2.6;bx.globalAlpha=(1-z)*(.25+.45*pu);bx.lineWidth=(2+z*7)*u;bx.save();bx.translate(X,Y);bx.rotate(t*.15+z*.6);bx.strokeRect(-s/2,-s/2,s,s);bx.restore()}
+  bx.globalAlpha=pu*.1;bx.fillRect(0,0,W,H)}
+ else if(k=='trance'){ // rotating sunburst + warp-speed starfield
+  bx.globalAlpha=.05+.09*pu;
+  for(let i=0;i<14;i++){const a=t*.06+i*Math.PI/7;bx.beginPath();bx.moveTo(X,Y);bx.arc(X,Y,D*1.1,a,a+Math.PI/14);bx.fill()}
+  for(let i=0;i<70;i++){const z=(t*bpmNow/300+i*.618)%1,a=i*2.4,r=z*z*D*1.1;bx.globalAlpha=Math.min(1,z*1.6)*.9;bx.beginPath();bx.arc(X+Math.cos(a)*r,Y+Math.sin(a)*r,(1+z*3.5)*u,0,7);bx.fill()}}
+ else for(let i=0;i<9;i++){ // jazz + idle: drifting smoky bokeh that swells on the beat
+  const x=W*(.5+.42*Math.sin(t*.11*(i%4+1)+i*1.7)),y=H*(.5+.42*Math.cos(t*.09*(i%3+1)+i*2.3)),r=(W+H)*(.07+.02*(i%3))*(1+.18*pu),g=bx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0,c);g.addColorStop(1,c+'00');bx.globalAlpha=k=='i'?.12:.26;bx.fillStyle=g;bx.beginPath();bx.arc(x,y,r,0,7);bx.fill()}
+ if(fl>0){bx.globalAlpha=fl*.25;bx.fillStyle=c;bx.fillRect(0,0,W,H);fl-=.04} // flash when a new track starts
+ bx.globalAlpha=1;
+}
+
+// beat-synced visualizer (decorative)
+const cv=E.vis,cx=cv.getContext('2d'),lv=Array(40).fill(0);
+const fit=()=>{cv.width=cv.clientWidth*2;cv.height=cv.clientHeight*2};fit();addEventListener('resize',fit);
+(function draw(){
+ const w=cv.width,h=cv.height,t=performance.now()/1e3,pu=bpmNow?Math.exp(-((t*bpmNow/60)%1)*3.5):0,bw=w/lv.length;
+ cx.clearRect(0,0,w,h);cx.fillStyle=col;
+ lv.forEach((v,i)=>{
+  const g=on?(bpmNow?(.12+.88*pu*(1-i/lv.length*.6))*(.45+.55*Math.abs(Math.sin(t*3+i*1.7))):R()*.3):0;
+  lv[i]+=(g-v)*.3;cx.fillRect(i*bw+2,h-lv[i]*h,bw-4,lv[i]*h);
+ });
+ bgDraw(t,pu);requestAnimationFrame(draw);
+})();
+</script>
+</body></html>
