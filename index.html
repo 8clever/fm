@@ -58,6 +58,8 @@ button{min-height:44px;padding:0 6px;white-space:nowrap;touch-action:manipulatio
  button{font-size:12px}
  pre{max-height:110px}
 }
+#pre{grid-template-columns:repeat(4,1fr)}
+#pre button{white-space:pre-line;line-height:1.25;padding:4px}
 </style></head><body>
 <canvas id="bg"></canvas>
 <main>
@@ -83,7 +85,7 @@ const title=()=>pick(['Velvet','Neon','Midnight','Glass','Paper','Solar','Quiet'
 
 // ---------- JAZZ: rootless ii-V-I voicings, walking bass, improvised lead, swung ride ----------
 function jazz(){
- const r=pick([48,53,46,51,55]),bpm=ri(84,112),P=pick([[1,4,0,0],[1,4,0,5],[0,5,1,4],[2,5,1,4],[0,2,1,4]]);
+ const r=pick([48,53,46,51,55]),bpm=ri(104,148),P=pick([[1,4,0,0],[1,4,0,5],[0,5,1,4],[2,5,1,4],[0,2,1,4]]);
  const ch=S(P.map(d=>C([2,4,6,8].map(k=>deg(r,MAJ,d+k)))));
  const wk=S(P.map((d,i)=>B([d,d+2,d+4,P[(i+1)%4]].map((x,j)=>deg(r-12,MAJ,x)+(j>2?pick([-1,1]):0)))));
  let d=pick([8,9,11]);
@@ -135,6 +137,27 @@ function trance(){
  return{p,bpm,i:`${NN[r%12]} minor · ${bpm} bpm · progression ${P.map(d=>d+1).join('–')} · 8-bar breakdown cycle\nsupersaw ${sup}\narp ${ar}`}
 }
 
+// ---------- LOFI HIP-HOP: dusty boom-bap, tape-wobble 9th chords, sub bass, sparse lead, vinyl crackle ----------
+function lofi(){
+ const r=pick([48,50,52,53,55,57]),bpm=ri(70,86),sc=pick([MAJ,MIN]),P=pick([[1,4,0,5],[0,5,3,4],[5,3,0,4],[0,3,1,4],[1,5,0,3]]),dt=60/bpm*.75;
+ const ch=S(P.map(d=>C([0,2,4,6,8].flatMap(k=>{const n=deg(r,sc,d+k);return[n-.1,n+.1].map(x=>x.toFixed(2))}))));
+ const bs=S(P.map(d=>deg(r-12,sc,d)));
+ let m=pick([8,9,11]);const step=()=>{m=Math.min(13,Math.max(7,m+pick([-2,-1,-1,1,1,2])));return deg(r,sc,m)};
+ const ld=S(P.map(()=>B(Array.from({length:8},()=>R()<.55?'~':step()))));
+ const p=stack(
+  opt(note(ch).struct(pick(['x ~ ~ ~ ~ ~ [~ x] ~','[x ~] ~ ~ x ~ ~ ~ ~','x ~ ~ [~ x] ~ ~ ~ ~'])).s('triangle').lpf(1000).attack(.02).decay(.8).sustain(.25).release(.8).gain(.12).room(.55).pan(.4),{vib:.6,vibmod:.25}),
+  note(bs).struct(pick(['x ~ ~ [~ x] ~ ~ x ~','x ~ ~ ~ ~ [~ x] ~ ~','x ~ [~ x] ~ ~ ~ x ~'])).s('triangle').lpf(420).attack(.008).decay(.35).sustain(.4).release(.15).gain(.8),
+  note(ld).s('triangle').lpf(2400).attack(.01).decay(.4).sustain(.15).release(.5).gain(.3).pan(.62).delay(.4).delaytime(dt).delayfeedback(.45).room(.5),
+  opt(note(33).s('sine').struct(pick(['x ~ ~ ~ ~ ~ x ~ ~ ~ x ~ ~ ~ ~ ~','x ~ ~ ~ ~ ~ ~ x ~ ~ x ~ ~ ~ ~ ~','x ~ ~ x ~ ~ ~ ~ ~ ~ x ~ ~ ~ x ~'])).attack(.001).decay(.24).sustain(0).gain(.95),{penv:30,pdecay:.05,pdec:.05}),
+  s('pink').struct('~ x ~ x').late(.006).hpf(400).lpf(4200).decay(.16).sustain(0).gain(.5).room(.3),
+  note(45).s('triangle').struct('~ x ~ x').late(.006).decay(.09).sustain(0).gain(.35),
+  opt(s('white').struct('x*16'),{swingBy:[1/4,8]}).hpf(6000).lpf(9500).decay(.03).sustain(0).gain(rand.range(.05,.16)).degradeBy(.3),
+  s('crackle').gain(.35).hpf(1200),
+  s('pink').sustain(1).release(.05).gain(.02).hpf(3000).lpf(9000)
+ ).fast(bpm/120);
+ return{p,bpm,i:`${NN[r%12]} ${sc===MAJ?'major':'minor'} · ${bpm} bpm · swung 16ths · tape-wobble 9th chords\nchords ${ch}\nbass ${bs}\nlead ${ld}`}
+}
+
 // ---------- between stations: radio static, crackle and heterodyne whistles ----------
 const stat=()=>stack(
  s('white').sustain(1).release(.05).gain(.12).hpf(500).lpf(sine.range(2000,7000).slow(3)),
@@ -142,12 +165,12 @@ const stat=()=>stack(
  note(rand.range(84,104).segment(2)).s('sine').gain(.035).delay(.5).delaytime(.2).delayfeedback(.6)
 );
 
-const ST=[{f:90.2,n:'BLUE ROOM',g:'jazz',fn:jazz,c:'#4da3ff'},{f:97.4,n:'CONCRETE 303',g:'techno',fn:techno,c:'#ff3d6e'},{f:104.6,n:'HORIZON',g:'trance',fn:trance,c:'#b26bff'}];
+const ST=[{f:90.2,n:'BLUE ROOM',g:'jazz',fn:jazz,c:'#4da3ff'},{f:94.6,n:'RAINY WINDOW',g:'lofi',fn:lofi,c:'#42d9a0'},{f:99.0,n:'CONCRETE 303',g:'techno',fn:techno,c:'#ff3d6e'},{f:104.6,n:'HORIZON',g:'trance',fn:trance,c:'#b26bff'}];
 let on=0,ready=0,cur,tm,sw,auto,bpmNow=0,col='#8a8a8a',wl;
 
 ST.forEach(q=>{
  const m=document.createElement('div');m.className='mk';m.style.cssText=`left:calc(16px + (100% - 32px)*${(q.f*10-875)/205});--c:${q.c}`;m.textContent=q.g;E.mks.append(m);
- const b=document.createElement('button');b.textContent=q.g.toUpperCase()+' '+q.f;b.style.borderColor=q.c;b.onclick=()=>seek(Math.round(q.f*10));E.pre.append(b);
+ const b=document.createElement('button');b.textContent=q.g.toUpperCase()+'\n'+q.f;b.style.borderColor=q.c;b.onclick=()=>seek(Math.round(q.f*10));E.pre.append(b);
 });
 
 const near=()=>{const f=+E.dial.value/10;return ST.find(q=>Math.abs(q.f-f)<.45)||null};
@@ -215,6 +238,7 @@ function bgDraw(t,pu){
  else for(let i=0;i<9;i++){ // jazz + idle: drifting smoky bokeh that swells on the beat
   const x=W*(.5+.42*Math.sin(t*.11*(i%4+1)+i*1.7)),y=H*(.5+.42*Math.cos(t*.09*(i%3+1)+i*2.3)),r=(W+H)*(.07+.02*(i%3))*(1+.18*pu),g=bx.createRadialGradient(x,y,0,x,y,r);
   g.addColorStop(0,c);g.addColorStop(1,c+'00');bx.globalAlpha=k=='i'?.12:.26;bx.fillStyle=g;bx.beginPath();bx.arc(x,y,r,0,7);bx.fill()}
+ if(k=='lofi'){bx.strokeStyle=c;bx.lineWidth=1.5*u;bx.globalAlpha=.35;bx.beginPath();for(let i=0;i<70;i++){const x=(i*137.5)%W,y=(t*(260+i%5*70)+i*211)%(H+60)-30;bx.moveTo(x,y);bx.lineTo(x-4*u,y+22*u)}bx.stroke()} // rain on the window
  if(fl>0){bx.globalAlpha=fl*.25;bx.fillStyle=c;bx.fillRect(0,0,W,H);fl-=.04} // flash when a new track starts
  bx.globalAlpha=1;
 }
