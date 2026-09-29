@@ -72,7 +72,7 @@ button{min-height:44px;padding:0 6px;white-space:nowrap;touch-action:manipulatio
 <h1>VITIAEV FM</h1>
 <p class="sub">An endless generative radio: every track is composed live and never plays twice.</p>
 <div class="radio">
- <div class="screen"><div id="mhz">88.0<small>MHz</small></div><div id="stn">— static —</div><div id="trk">Press ON AIR to power the radio</div><canvas id="vis"></canvas><div id="tl"><div id="bar"><i style="--c:#4da3ff"></i><i style="--c:#42d9a0"></i><i style="--c:#ff3d6e"></i><i style="--c:#b26bff"></i></div><div id="tm"></div></div></div>
+ <div class="screen"><div id="mhz">88.0<small>MHz</small></div><div id="stn">— no signal —</div><div id="trk">Press ON AIR to power the radio</div><canvas id="vis"></canvas><div id="tl"><div id="bar"><i style="--c:#4da3ff"></i><i style="--c:#42d9a0"></i><i style="--c:#ff3d6e"></i><i style="--c:#b26bff"></i></div><div id="tm"></div></div></div>
  <div class="dial"><div class="rule"></div><div id="mks"></div><input id="dial" type="range" min="875" max="1080" value="880" aria-label="Tuning dial"></div>
  <div class="row"><button id="pwr">⏻ ON AIR</button><button id="scan">▶ 1H SHOW</button><button id="nxt">✦ NEW TRACK</button></div><div class="row" id="pre"></div>
 </div>
@@ -166,12 +166,7 @@ function lofi(){
  return{p,bpm,i:`${NN[r%12]} ${sc===MAJ?'major':'minor'} · ${bpm} bpm · swung 16ths · tape-wobble 9th chords\nchords ${ch}\nbass ${bs}\nlead ${ld}`}
 }
 
-// ---------- between stations: radio static, crackle and heterodyne whistles ----------
-const stat=()=>stack(
- s('white').sustain(1).release(.05).gain(.12).hpf(500).lpf(sine.range(2000,7000).slow(3)),
- s('crackle').gain(.6),
- note(rand.range(84,104).segment(2)).s('sine').gain(.035).delay(.5).delaytime(.2).delayfeedback(.6)
-);
+// between stations the radio is silent (the background only shows visual snow)
 
 const ST=[{f:90.2,n:'BLUE ROOM',g:'jazz',fn:jazz,c:'#4da3ff'},{f:94.6,n:'RAINY WINDOW',g:'lofi',fn:lofi,c:'#42d9a0'},{f:99.0,n:'CONCRETE 303',g:'techno',fn:techno,c:'#ff3d6e'},{f:104.6,n:'HORIZON',g:'trance',fn:trance,c:'#b26bff'}];
 let on=0,ready=0,cur,tm,sw,auto,bpmNow=0,col='#8a8a8a',wl,show=0,curT,curB,trackAt=0;
@@ -184,14 +179,14 @@ ST.forEach(q=>{
 const near=()=>{const f=+E.dial.value/10;return ST.find(q=>Math.abs(q.f-f)<.45)||null};
 function play(st){
  try{
-  const o=st?st.fn():{p:stat(),bpm:0,i:''};
-  try{hush()}catch(e){}o.p.play();fl=1;trackAt=Date.now();bpmNow=o.bpm;col=st?st.c:'#8a8a8a';
-  E.trk.textContent=st?'♪ “'+title()+'” · '+o.bpm+' bpm':'tuning…';E.score.textContent=o.i.slice(0,640)+' …';
+  const o=st?st.fn():{p:null,bpm:0,i:''};
+  try{hush()}catch(e){}o.p&&o.p.play();fl=1;trackAt=Date.now();bpmNow=o.bpm;col=st?st.c:'#8a8a8a';
+  E.trk.textContent=st?'♪ “'+title()+'” · '+o.bpm+' bpm':'no station on this frequency';E.score.textContent=o.i?o.i.slice(0,640)+' …':'';
  }catch(e){E.trk.textContent='⚠ '+e.message}
 }
 function upd(fin){
  const st=near();E.mhz.firstChild.nodeValue=(+E.dial.value/10).toFixed(1);
- E.stn.textContent=st?st.n+' · '+st.g.toUpperCase():'— static —';
+ E.stn.textContent=st?st.n+' · '+st.g.toUpperCase():'— no signal —';
  document.documentElement.style.setProperty('--sc',st?st.c:'var(--mu)');
  if(!on)return;clearTimeout(tm);if(st===cur)return;
  tm=setTimeout(()=>{const q=near();if(q===cur)return;cur=q;play(q)},st&&!fin?350:0);
