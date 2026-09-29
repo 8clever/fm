@@ -60,15 +60,21 @@ button{min-height:44px;padding:0 6px;white-space:nowrap;touch-action:manipulatio
 }
 #pre{grid-template-columns:repeat(4,1fr)}
 #pre button{white-space:pre-line;line-height:1.25;padding:4px}
+#tl{display:none;margin-top:10px}
+#tl.on{display:block}
+#bar{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+#bar i{height:8px;border-radius:4px;position:relative;overflow:hidden;background:color-mix(in srgb,var(--c) 22%,transparent)}
+#bar i:after{content:"";position:absolute;inset:0;width:var(--p,0%);background:var(--c)}
+#tm{font-size:12px;color:var(--mu);margin-top:4px}
 </style></head><body>
 <canvas id="bg"></canvas>
 <main>
 <h1>VITIAEV FM</h1>
 <p class="sub">An endless generative radio: every track is composed live and never plays twice.</p>
 <div class="radio">
- <div class="screen"><div id="mhz">88.0<small>MHz</small></div><div id="stn">— static —</div><div id="trk">Press ON AIR to power the radio</div><canvas id="vis"></canvas></div>
+ <div class="screen"><div id="mhz">88.0<small>MHz</small></div><div id="stn">— static —</div><div id="trk">Press ON AIR to power the radio</div><canvas id="vis"></canvas><div id="tl"><div id="bar"><i style="--c:#4da3ff"></i><i style="--c:#42d9a0"></i><i style="--c:#ff3d6e"></i><i style="--c:#b26bff"></i></div><div id="tm"></div></div></div>
  <div class="dial"><div class="rule"></div><div id="mks"></div><input id="dial" type="range" min="875" max="1080" value="880" aria-label="Tuning dial"></div>
- <div class="row"><button id="pwr">⏻ ON AIR</button><button id="scan">⟳ AUTO-SCAN</button><button id="nxt">✦ NEW TRACK</button></div><div class="row" id="pre"></div>
+ <div class="row"><button id="pwr">⏻ ON AIR</button><button id="scan">▶ 1H SHOW</button><button id="nxt">✦ NEW TRACK</button></div><div class="row" id="pre"></div>
 </div>
 <pre id="score"></pre>
 </main>
@@ -80,14 +86,16 @@ const NN='C C# D D# E F F# G G# A A# B'.split(' ');
 const MAJ=[0,2,4,5,7,9,11],MIN=[0,2,3,5,7,8,10],PHR=[0,1,3,5,7,8,10];
 const deg=(r,sc,d)=>r+sc[(d%7+7)%7]+12*Math.floor(d/7);
 const B=a=>'['+a.join(' ')+']',S=a=>'<'+a.join(' ')+'>',C=a=>'['+a+']';
+// long-form tracks: TRK seconds per track, progressions/masks generated for every bar so nothing loops
+const TRK=180,NB=b=>Math.ceil(TRK*b/240)+4,prog=(n,T)=>{let a=[];while(a.length<n)a=a.concat(pick(T));return a},arr=(n,on)=>{let a=[];while(a.length<n){const L=4*ri(1,4),v=R()<on?1:0;for(let i=0;i<L;i++)a.push(v)}return a.slice(0,n)};
 const opt=(p,o)=>{for(const k in o)if(typeof p[k]=='function')p=p[k](...[].concat(o[k]));return p};
-const title=()=>pick(['Velvet','Neon','Midnight','Glass','Paper','Solar','Quiet','Copper','Lunar','Electric'])+' '+pick(['Orbit','Rain','Harbor','Signal','Garden','Circuit','Tide','Mirage','Cathedral','Tram']);
+const seen=new Set(),title=()=>{let t;do t=t0();while(seen.has(t)&&seen.size<100);seen.add(t);return t},t0=()=>pick(['Velvet','Neon','Midnight','Glass','Paper','Solar','Quiet','Copper','Lunar','Electric'])+' '+pick(['Orbit','Rain','Harbor','Signal','Garden','Circuit','Tide','Mirage','Cathedral','Tram']);
 
 // ---------- JAZZ: rootless ii-V-I voicings, walking bass, improvised lead, swung ride ----------
 function jazz(){
- const r=pick([48,53,46,51,55]),bpm=ri(104,148),P=pick([[1,4,0,0],[1,4,0,5],[0,5,1,4],[2,5,1,4],[0,2,1,4]]);
+ const r=pick([48,53,46,51,55]),bpm=ri(104,148),P=prog(NB(bpm),[[1,4,0,0],[1,4,0,5],[0,5,1,4],[2,5,1,4],[0,2,1,4]]);
  const ch=S(P.map(d=>C([2,4,6,8].map(k=>deg(r,MAJ,d+k)))));
- const wk=S(P.map((d,i)=>B([d,d+2,d+4,P[(i+1)%4]].map((x,j)=>deg(r-12,MAJ,x)+(j>2?pick([-1,1]):0)))));
+ const wk=S(P.map((d,i)=>B([d,d+2,d+4,P[(i+1)%P.length]].map((x,j)=>deg(r-12,MAJ,x)+(j>2?pick([-1,1]):0)))));
  let d=pick([8,9,11]);
  const ld=S(P.map(()=>B(Array.from({length:8},()=>R()<.4?'~':deg(r,MAJ,d=Math.min(15,Math.max(7,d+pick([-2,-1,-1,1,1,2]))))))));
  const p=stack(
@@ -103,9 +111,9 @@ function jazz(){
 
 // ---------- TECHNO: synth kick, offbeat hats, acid 303 with sweeping filter, dub stabs ----------
 function techno(){
- const r=pick([31,33,34,36]),bpm=ri(124,134),sc=pick([MIN,PHR]),dt=60/bpm*.75,mk='<1 1 1 1 1 1 1 0>';
- const ac=()=>B(Array.from({length:16},()=>R()<.28?'~':deg(r+12,sc,pick([0,0,0,2,3,4,7]))+(R()<.15?12:0)));
- const acid=S([ac(),ac()]),P=pick([[0,3,0,5],[0,5,3,6],[0,0,3,6]]);
+ const r=pick([31,33,34,36]),bpm=ri(124,134),sc=pick([MIN,PHR]),dt=60/bpm*.75,mk=S(arr(NB(bpm),.8));
+ const nt=()=>R()<.28?'~':deg(r+12,sc,pick([0,0,0,2,3,4,7]))+(R()<.15?12:0),rf=Array.from({length:16},nt),ac=()=>{for(let j=0;j<3;j++)rf[ri(0,15)]=nt();return B(rf)};
+ const acid=S(Array.from({length:NB(bpm)},ac)),P=prog(NB(bpm),[[0,3,0,5],[0,5,3,6],[0,0,3,6]]);
  const stab=S(P.map(d=>C([0,2,4,6].map(k=>deg(r+24,sc,d+k)))));
  const p=stack(
   opt(note(28).s('sine').struct('x*4').attack(.001).decay(.3).sustain(0).gain(1.1),{penv:40,pdecay:.05,pdec:.05}).mask(mk),
@@ -121,7 +129,7 @@ function techno(){
 
 // ---------- TRANCE: detuned supersaw gate, rolling bass, dotted-delay arp, breakdown + riser ----------
 function trance(){
- const r=pick([45,43,50,47]),bpm=ri(134,142),P=pick([[0,5,2,6],[0,3,5,4],[0,6,5,6],[5,3,0,6]]),dt=60/bpm*.75,mk='<1 1 1 1 1 1 0 0>';
+ const r=pick([45,43,50,47]),bpm=ri(134,142),P=prog(NB(bpm),[[0,5,2,6],[0,3,5,4],[0,6,5,6],[5,3,0,6]]),dt=60/bpm*.75,A=arr(NB(bpm),.75),mk=S(A),rs=S(A.map((v,i)=>+(v==0&&(A[i+1]==1||A[i+2]==1))));
  const sup=S(P.map(d=>C([0,2,4].flatMap(k=>{const n=deg(r+12,MIN,d+k);return[n-.16,n,n+.16].map(x=>x.toFixed(2))}).concat(deg(r,MIN,d)))));
  const bs=S(P.map(d=>deg(r-12,MIN,d)));
  const ar=S(P.map(d=>B(Array.from({length:16},()=>R()<.25?'~':deg(r+24,MIN,d+pick([0,2,4,7,9]))))));
@@ -132,14 +140,14 @@ function trance(){
   s('white').struct('[~ x]*4').hpf(8000).decay(.09).sustain(0).gain(.28).mask(mk),
   s('pink').struct('~ x ~ x').hpf(1300).lpf(6000).decay(.16).sustain(0).gain(.4).room(.4).mask(mk),
   note(ar).s('square').lpf(3200).decay(.11).sustain(0).gain(.2).delay(.4).delaytime(dt).delayfeedback(.5).room(.4).pan(.6),
-  s('white').struct('x*16').hpf(saw.range(600,9000).slow(2)).decay(.05).sustain(0).gain(saw.range(0,.35).slow(2)).mask('<0 0 0 0 0 0 1 1>')
+  s('white').struct('x*16').hpf(saw.range(600,9000).slow(2)).decay(.05).sustain(0).gain(saw.range(0,.35).slow(2)).mask(rs)
  ).fast(bpm/120);
  return{p,bpm,i:`${NN[r%12]} minor · ${bpm} bpm · progression ${P.map(d=>d+1).join('–')} · 8-bar breakdown cycle\nsupersaw ${sup}\narp ${ar}`}
 }
 
 // ---------- LOFI HIP-HOP: dusty boom-bap, tape-wobble 9th chords, sub bass, sparse lead, vinyl crackle ----------
 function lofi(){
- const r=pick([48,50,52,53,55,57]),bpm=ri(70,86),sc=pick([MAJ,MIN]),P=pick([[1,4,0,5],[0,5,3,4],[5,3,0,4],[0,3,1,4],[1,5,0,3]]),dt=60/bpm*.75;
+ const r=pick([48,50,52,53,55,57]),bpm=ri(70,86),sc=pick([MAJ,MIN]),P=prog(NB(bpm),[[1,4,0,5],[0,5,3,4],[5,3,0,4],[0,3,1,4],[1,5,0,3]]),dt=60/bpm*.75;
  const ch=S(P.map(d=>C([0,2,4,6,8].flatMap(k=>{const n=deg(r,sc,d+k);return[n-.1,n+.1].map(x=>x.toFixed(2))}))));
  const bs=S(P.map(d=>deg(r-12,sc,d)));
  let m=pick([8,9,11]);const step=()=>{m=Math.min(13,Math.max(7,m+pick([-2,-1,-1,1,1,2])));return deg(r,sc,m)};
@@ -166,19 +174,19 @@ const stat=()=>stack(
 );
 
 const ST=[{f:90.2,n:'BLUE ROOM',g:'jazz',fn:jazz,c:'#4da3ff'},{f:94.6,n:'RAINY WINDOW',g:'lofi',fn:lofi,c:'#42d9a0'},{f:99.0,n:'CONCRETE 303',g:'techno',fn:techno,c:'#ff3d6e'},{f:104.6,n:'HORIZON',g:'trance',fn:trance,c:'#b26bff'}];
-let on=0,ready=0,cur,tm,sw,auto,bpmNow=0,col='#8a8a8a',wl;
+let on=0,ready=0,cur,tm,sw,auto,bpmNow=0,col='#8a8a8a',wl,show=0,curT,curB,trackAt=0;
 
 ST.forEach(q=>{
  const m=document.createElement('div');m.className='mk';m.style.cssText=`left:calc(16px + (100% - 32px)*${(q.f*10-875)/205});--c:${q.c}`;m.textContent=q.g;E.mks.append(m);
- const b=document.createElement('button');b.textContent=q.g.toUpperCase()+'\n'+q.f;b.style.borderColor=q.c;b.onclick=()=>seek(Math.round(q.f*10));E.pre.append(b);
+ const b=document.createElement('button');b.textContent=q.g.toUpperCase()+'\n'+q.f;b.style.borderColor=q.c;b.onclick=()=>{endShow();seek(Math.round(q.f*10))};E.pre.append(b);
 });
 
 const near=()=>{const f=+E.dial.value/10;return ST.find(q=>Math.abs(q.f-f)<.45)||null};
 function play(st){
  try{
   const o=st?st.fn():{p:stat(),bpm:0,i:''};
-  o.p.play();fl=1;bpmNow=o.bpm;col=st?st.c:'#8a8a8a';
-  E.trk.textContent=st?'♪ “'+title()+'” · '+o.bpm+' bpm':'tuning…';E.score.textContent=o.i;
+  try{hush()}catch(e){}o.p.play();fl=1;trackAt=Date.now();bpmNow=o.bpm;col=st?st.c:'#8a8a8a';
+  E.trk.textContent=st?'♪ “'+title()+'” · '+o.bpm+' bpm':'tuning…';E.score.textContent=o.i.slice(0,640)+' …';
  }catch(e){E.trk.textContent='⚠ '+e.message}
 }
 function upd(fin){
@@ -194,7 +202,8 @@ async function boot(){
  return ready;
 }
 async function start(){if(!await boot())return 0;on=1;try{wl=await navigator.wakeLock.request('screen')}catch(e){}E.pwr.classList.add('lit');E.pwr.textContent='■ OFF AIR';upd(1);return 1}
-function stop(){
+function endShow(){if(!show)return;show=0;E.scan.classList.remove('lit');E.scan.textContent='▶ 1H SHOW';E.tl.classList.remove('on')}
+function stop(){endShow();
  on=0;cur=undefined;clearInterval(sw);clearInterval(auto);auto=0;try{hush()}catch(e){}try{wl&&wl.release()}catch(e){}
  bpmNow=0;E.pwr.classList.remove('lit');E.scan.classList.remove('lit');E.pwr.textContent='⏻ ON AIR';E.trk.textContent='off air';
 }
@@ -208,14 +217,27 @@ async function seek(t){
 E.pwr.onclick=()=>on?stop():start();
 E.nxt.onclick=()=>{if(on&&cur)play(cur)};
 E.scan.onclick=async()=>{
- if(auto){clearInterval(auto);auto=0;E.scan.classList.remove('lit');return}
+ if(show){endShow();return}
  if(!on&&!await start())return;
  E.scan.classList.add('lit');
- const go=()=>seek(Math.round(pick(ST.filter(q=>q!==cur)).f*10));go();auto=setInterval(go,40000);
+ show=Date.now();curT=curB=-1;E.tl.classList.add('on');E.scan.textContent='■ END SHOW';tick();
 };
-E.dial.oninput=()=>{clearInterval(sw);upd()};
+E.dial.oninput=()=>{endShow();clearInterval(sw);upd()};
 E.dial.onchange=()=>upd(1);
-setInterval(()=>{if(on&&cur)play(cur)},50000); // the station keeps composing new tracks
+// ---------- the programme: 4 x 15 min (jazz > lofi > techno > trance), 5 brand-new 3-min tracks per block ----------
+const mmss=x=>(x/60|0)+':'+String(x%60|0).padStart(2,'0');
+function tick(){
+ if(!on)return;
+ if(!show){if(cur&&Date.now()-trackAt>TRK*1e3)play(cur);return}
+ const e=(Date.now()-show)/1e3;
+ if(e>=3600){endShow();E.trk.textContent='✔ That was the full hour. Free-tune the dial or start a new show.';return}
+ const b=e/900|0,t=e/TRK|0;
+ [...E.bar.children].forEach((x,i)=>x.style.setProperty('--p',Math.max(0,Math.min(1,(e-i*900)/900))*100+'%'));
+ E.tm.textContent=`${mmss(e)} / 60:00 · ${ST[b].g} · track ${t%5+1}/5 · ${b<3?'next '+ST[b+1].g+' in '+mmss(900*(b+1)-e):'final block'}`;
+ if(t!==curT){curT=t;if(b!==curB){curB=b;seek(Math.round(ST[b].f*10))}else play(ST[b])}
+}
+setInterval(tick,1000);
+document.onvisibilitychange=async()=>{if(on&&!document.hidden)try{wl=await navigator.wakeLock.request('screen')}catch(e){}};
 
 // ---------- background: a full-screen scene per station (decorative, beat-synced) ----------
 const bx=E.bg.getContext('2d'),rm=matchMedia('(prefers-reduced-motion:reduce)').matches;let W=0,H=0,fl=0;
